@@ -55,10 +55,11 @@ macro_rules! into_service {
         make_service_fn(move |transport| {
             let inner = inner.clone();
             let remote_addr = Transport::remote_addr(transport);
-            future::ok::<_, Infallible>(service_fn(move |req| {
-                inner.call_with_addr(req, remote_addr)
-            }))
-        })
+	    let peer_certificates = Transport::peer_certificates(transport);
+	    future::ok::<_, Infallible>(service_fn(move |req| {
+                inner.call_with_addr(req, remote_addr, peer_certificates.clone())
+	    }))
+            })
     }};
 }
 

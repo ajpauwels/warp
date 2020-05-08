@@ -366,7 +366,7 @@ impl RequestBuilder {
         // TODO: de-duplicate this and apply_filter()
         assert!(!route::is_set(), "nested test filter calls");
 
-        let route = Route::new(self.req, self.remote_addr);
+        let route = Route::new(self.req, self.remote_addr, None);
         let mut fut = Box::pin(
             route::set(&route, move || f.filter(crate::filter::Internal)).then(|result| {
                 let res = match result {
@@ -396,7 +396,7 @@ impl RequestBuilder {
     {
         assert!(!route::is_set(), "nested test filter calls");
 
-        let route = Route::new(self.req, self.remote_addr);
+        let route = Route::new(self.req, self.remote_addr, None);
         let mut fut = Box::pin(route::set(&route, move || {
             f.filter(crate::filter::Internal)
         }));

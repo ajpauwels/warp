@@ -174,6 +174,11 @@ impl Transport for TlsStream {
     fn remote_addr(&self) -> Option<SocketAddr> {
         Some(self.remote_addr)
     }
+    fn peer_certificates(&self) -> Option<Vec<Vec<u8>>> {
+        self.session
+            .get_peer_certificates()
+            .map(|v| v.into_iter().map(|c| c.0).collect())
+    }
 }
 
 enum State {
