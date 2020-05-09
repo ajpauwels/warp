@@ -216,6 +216,7 @@ impl Transport for TlsStream {
                 None
             }
             State::Streaming(ref stream) => {
+                println!("in streaming");
                 let (_, sess) = stream.get_ref();
                 sess.get_peer_certificates()
                     .map(|v| v.into_iter().map(|c| c.0).collect())
