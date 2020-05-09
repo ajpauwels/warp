@@ -255,21 +255,25 @@ impl AsyncRead for TlsStream {
         cx: &mut Context,
         buf: &mut [u8],
     ) -> Poll<io::Result<usize>> {
-        println!("reading");
+        println!("reading 1");
         let pin = self.get_mut();
+        println!("reading 2");
         match pin.state {
-            State::Handshaking(ref mut accept) => match ready!(Pin::new(accept).poll(cx)) {
-                Ok(mut stream) => {
-                    println!("reading, handshaking, OK");
-                    let result = Pin::new(&mut stream).poll_read(cx, buf);
-                    pin.state = State::Streaming(stream);
-                    result
+            State::Handshaking(ref mut accept) => {
+                println!("reading 3");
+                match ready!(Pin::new(accept).poll(cx)) {
+                    Ok(mut stream) => {
+                        println!("reading, handshaking, OK");
+                        let result = Pin::new(&mut stream).poll_read(cx, buf);
+                        pin.state = State::Streaming(stream);
+                        result
+                    }
+                    Err(err) => {
+                        println!("reading, err: {}", err);
+                        Poll::Ready(Err(err))
+                    }
                 }
-                Err(err) => {
-                    println!("reading, err: {}", err);
-                    Poll::Ready(Err(err))
-                }
-            },
+            }
             State::Streaming(ref mut stream) => {
                 println!("reading, streaming");
                 Pin::new(stream).poll_read(cx, buf)
