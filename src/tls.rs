@@ -17,7 +17,9 @@ use hyper::server::accept::Accept;
 use hyper::server::conn::{AddrIncoming, AddrStream};
 
 use crate::transport::Transport;
-use tokio_rustls::rustls::{NoClientAuth, ServerConfig, Session, TLSError};
+use tokio_rustls::rustls::{
+    AllowAnyAuthenticatedClient, NoClientAuth, RootCertStore, ServerConfig, Session, TLSError,
+};
 
 pub use crate::filters::tls::peer_certificates;
 
@@ -56,6 +58,7 @@ impl std::error::Error for TlsConfigError {}
 pub(crate) struct TlsConfigBuilder {
     cert: Box<dyn Read + Send + Sync>,
     key: Box<dyn Read + Send + Sync>,
+    client_ca: Option<Box<dyn Read + Send + Sync>>,
 }
 
 impl std::fmt::Debug for TlsConfigBuilder {
@@ -70,6 +73,7 @@ impl TlsConfigBuilder {
         TlsConfigBuilder {
             key: Box::new(io::empty()),
             cert: Box::new(io::empty()),
+            client_ca: None,
         }
     }
 
@@ -100,6 +104,21 @@ impl TlsConfigBuilder {
     /// sets the Tls certificate via bytes slice
     pub(crate) fn cert(mut self, cert: &[u8]) -> Self {
         self.cert = Box::new(Cursor::new(Vec::from(cert)));
+        self
+    }
+
+    /// Specify the file path for the client CA trust anchor cert
+    pub(crate) fn client_ca_path(mut self, path: impl AsRef<Path>) -> Self {
+        self.client_ca = Some(Box::new(LazyFile {
+            path: path.as_ref().into(),
+            file: None,
+        }));
+        self
+    }
+
+    /// sets the client CA trust anchor cert via bytes slice
+    pub(crate) fn client_ca(mut self, ca: &[u8]) -> Self {
+        self.client_ca = Some(Box::new(Cursor::new(Vec::from(ca))));
         self
     }
 
@@ -140,7 +159,17 @@ impl TlsConfigBuilder {
             }
         };
 
-        let mut config = ServerConfig::new(NoClientAuth::new());
+        let mut config = match self.client_ca {
+            Some(ca) => {
+                let mut ca_rdr = BufReader::new(ca);
+                let mut rcs = RootCertStore { roots: vec![] };
+                rcs.add_pem_file(&mut ca_rdr)
+                    .map_err(|_| TlsConfigError::CertParseError)?;
+                ServerConfig::new(AllowAnyAuthenticatedClient::new(rcs))
+            }
+            None => ServerConfig::new(NoClientAuth::new()),
+        };
+
         config
             .set_single_cert(cert, key)
             .map_err(|err| TlsConfigError::InvalidKey(err))?;

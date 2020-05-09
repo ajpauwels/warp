@@ -55,11 +55,11 @@ macro_rules! into_service {
         make_service_fn(move |transport| {
             let inner = inner.clone();
             let remote_addr = Transport::remote_addr(transport);
-	    let peer_certificates = Transport::peer_certificates(transport);
-	    future::ok::<_, Infallible>(service_fn(move |req| {
+            let peer_certificates = Transport::peer_certificates(transport);
+            future::ok::<_, Infallible>(service_fn(move |req| {
                 inner.call_with_addr(req, remote_addr, peer_certificates.clone())
-	    }))
-            })
+            }))
+        })
     }};
 }
 
@@ -383,6 +383,11 @@ where
         self.with_tls(|tls| tls.cert_path(path))
     }
 
+    /// Specify the in-memory contents of the client ca certificate path.
+    pub fn client_ca_path(self, client_ca_path: impl AsRef<Path>) -> Self {
+        self.with_tls(|tls| tls.client_ca_path(client_ca_path))
+    }
+
     /// Specify the in-memory contents of the private key.
     pub fn key(self, key: impl AsRef<[u8]>) -> Self {
         self.with_tls(|tls| tls.key(key.as_ref()))
@@ -391,6 +396,11 @@ where
     /// Specify the in-memory contents of the certificate.
     pub fn cert(self, cert: impl AsRef<[u8]>) -> Self {
         self.with_tls(|tls| tls.cert(cert.as_ref()))
+    }
+
+    /// Specify the in-memory contents of the client ca certificate.
+    pub fn client_ca(self, client_ca: impl AsRef<[u8]>) -> Self {
+        self.with_tls(|tls| tls.client_ca(client_ca.as_ref()))
     }
 
     fn with_tls<Func>(self, func: Func) -> Self
