@@ -255,17 +255,25 @@ impl AsyncRead for TlsStream {
         cx: &mut Context,
         buf: &mut [u8],
     ) -> Poll<io::Result<usize>> {
+        println!("reading");
         let pin = self.get_mut();
         match pin.state {
             State::Handshaking(ref mut accept) => match ready!(Pin::new(accept).poll(cx)) {
                 Ok(mut stream) => {
+                    println!("reading, handshaking, OK");
                     let result = Pin::new(&mut stream).poll_read(cx, buf);
                     pin.state = State::Streaming(stream);
                     result
                 }
-                Err(err) => Poll::Ready(Err(err)),
+                Err(err) => {
+                    println!("reading, err: {}", err);
+                    Poll::Ready(Err(err))
+                }
             },
-            State::Streaming(ref mut stream) => Pin::new(stream).poll_read(cx, buf),
+            State::Streaming(ref mut stream) => {
+                println!("reading, streaming");
+                Pin::new(stream).poll_read(cx, buf)
+            }
         }
     }
 }
@@ -276,18 +284,25 @@ impl AsyncWrite for TlsStream {
         cx: &mut Context<'_>,
         buf: &[u8],
     ) -> Poll<io::Result<usize>> {
-        println!("in write: {:?}", buf);
+        println!("writing, buf: {:?}", buf);
         let pin = self.get_mut();
         match pin.state {
             State::Handshaking(ref mut accept) => match ready!(Pin::new(accept).poll(cx)) {
                 Ok(mut stream) => {
+                    println!("writing, handshaking, OK");
                     let result = Pin::new(&mut stream).poll_write(cx, buf);
                     pin.state = State::Streaming(stream);
                     result
                 }
-                Err(err) => Poll::Ready(Err(err)),
+                Err(err) => {
+                    println!("writing, handshaking, err: {}", err);
+                    Poll::Ready(Err(err))
+                }
             },
-            State::Streaming(ref mut stream) => Pin::new(stream).poll_write(cx, buf),
+            State::Streaming(ref mut stream) => {
+                println!("writing, streaming");
+                Pin::new(stream).poll_write(cx, buf)
+            }
         }
     }
 
