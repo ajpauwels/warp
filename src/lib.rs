@@ -98,7 +98,7 @@ mod server;
 mod service;
 pub mod test;
 #[cfg(feature = "tls")]
-mod tls;
+pub mod tls;
 mod transport;
 
 pub use self::error::Error;
@@ -159,6 +159,7 @@ pub use self::reply::{reply, Reply};
 pub use self::server::TlsServer;
 pub use self::server::{serve, Server};
 pub use self::service::service;
+
 #[doc(hidden)]
 pub use http;
 #[doc(hidden)]
