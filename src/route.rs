@@ -99,6 +99,7 @@ impl Route {
         self.req.uri().path()
     }
 
+    #[cfg(feature = "tls")]
     pub(crate) fn peer_certificates(&self) -> Option<Vec<Vec<u8>>> {
         self.peer_certificates.clone()
     }

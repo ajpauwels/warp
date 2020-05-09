@@ -17,7 +17,7 @@ use hyper::server::accept::Accept;
 use hyper::server::conn::{AddrIncoming, AddrStream};
 
 use crate::transport::Transport;
-use tokio_rustls::rustls::{NoClientAuth, ServerConfig, ServerSession, Session, TLSError};
+use tokio_rustls::rustls::{NoClientAuth, ServerConfig, Session, TLSError};
 
 pub use crate::filters::tls::peer_certificates;
 
@@ -181,18 +181,14 @@ impl Transport for TlsStream {
         Some(self.remote_addr)
     }
     fn peer_certificates(&self) -> Option<Vec<Vec<u8>>> {
-        // match self.state {
-        //     State::Handshaking(_) => Poll::Ready(Ok(())),
-        //     State::Streaming(ref mut stream) => {
-        //         let (_, sess) = stream.get_ref();
-        //         sess.imp
-        //             .get_peer_certificates()
-        //             .map(|v| v.into_iter().map(|c| c.0).collect())
-        //     }
-        // }
-        self.session
-            .get_peer_certificates()
-            .map(|v| v.into_iter().map(|c| c.0).collect())
+        match self.state {
+            State::Handshaking(_) => None,
+            State::Streaming(ref stream) => {
+                let (_, sess) = stream.get_ref();
+                sess.get_peer_certificates()
+                    .map(|v| v.into_iter().map(|c| c.0).collect())
+            }
+        }
     }
 }
 
@@ -207,18 +203,15 @@ enum State {
 pub(crate) struct TlsStream {
     state: State,
     remote_addr: SocketAddr,
-    session: ServerSession,
 }
 
 impl TlsStream {
     fn new(stream: AddrStream, config: Arc<ServerConfig>) -> TlsStream {
         let remote_addr = stream.remote_addr();
         let accept = tokio_rustls::TlsAcceptor::from(config.clone()).accept(stream);
-        let session = ServerSession::new(&config);
         TlsStream {
             state: State::Handshaking(accept),
             remote_addr,
-            session,
         }
     }
 }
