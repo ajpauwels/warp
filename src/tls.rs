@@ -182,7 +182,10 @@ impl Transport for TlsStream {
     }
     fn peer_certificates(&self) -> Option<Vec<Vec<u8>>> {
         match self.state {
-            State::Handshaking(_) => None,
+            State::Handshaking(ref _accept) => {
+                println!("in handshaking");
+                None
+            }
             State::Streaming(ref stream) => {
                 let (_, sess) = stream.get_ref();
                 sess.get_peer_certificates()
