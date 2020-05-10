@@ -58,7 +58,6 @@ macro_rules! into_service {
             let peer_certificates = Transport::peer_certificates(transport);
             println!("in make_service_fn");
             future::ok::<_, Infallible>(service_fn(move |req| {
-                println!("{:?}", req.extensions());
                 println!("in service_fn");
                 inner.call_with_addr(req, remote_addr, peer_certificates.clone())
             }))
